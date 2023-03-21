@@ -3,6 +3,12 @@ const scoreInputs = [document.getElementById('player1'), document.getElementById
 const playerNameInputs = [document.getElementById('playerName1'), document.getElementById('playerName2'), document.getElementById('playerName3'), document.getElementById('playerName4')];
 const playerLabels = [document.getElementById('playerLabel1'), document.getElementById('playerLabel2'), document.getElementById('playerLabel3'), document.getElementById('playerLabel4')];
 const totalScores = [document.getElementById('totalPlayer1'), document.getElementById('totalPlayer2'), document.getElementById('totalPlayer3'), document.getElementById('totalPlayer4')];
+const totalPlayerLabels = [
+    document.getElementById('totalPlayerLabel1'),
+    document.getElementById('totalPlayerLabel2'),
+    document.getElementById('totalPlayerLabel3'),
+    document.getElementById('totalPlayerLabel4')
+];
 const scoreHistory = document.querySelector('#scoreHistory tbody');
 const roundTotal = document.createElement('div');
 document.body.insertBefore(roundTotal, scoreForm.nextSibling);
@@ -12,6 +18,8 @@ let roundNumber = 1;
 for (let i = 0; i < 4; i++) {
     playerNameInputs[i].addEventListener('input', function () {
         playerLabels[i].textContent = playerNameInputs[i].value || `Player ${i + 1}`;
+        scoreInputs[i].previousElementSibling.textContent = playerNameInputs[i].value || `Player ${i + 1} Score`;
+        totalPlayerLabels[i].textContent = playerNameInputs[i].value || `Player ${i + 1}`;
     });
 }
 
@@ -42,7 +50,10 @@ scoreForm.addEventListener('submit', function (event) {
         const newRow = scoreHistory.insertRow();
         newRow.insertCell(0).textContent = roundNumber++;
         for (let i = 0; i < 4; i++) {
-            newRow.insertCell(i + 1).textContent = scores[i];
+            const newCell = newRow.insertCell(i + 1);
+            newCell.textContent = scores[i];
+            newCell.contentEditable = true;
+            newCell.dataset.oldValue = scores[i];
         }
 
         // Reset input fields
@@ -55,5 +66,17 @@ scoreForm.addEventListener('submit', function (event) {
 
     } else {
         alert('The sum of scores should be zero. Please double-check your inputs.');
+    }
+});
+
+scoreHistory.addEventListener('input', function (event) {
+    const target = event.target;
+    if (target.tagName === 'TD') {
+        const rowIndex = target.parentNode.rowIndex - 1;
+        const cellIndex = target.cellIndex - 1;
+        const oldValue = parseInt(target.dataset.oldValue) || 0;
+        const newValue = parseInt(target.textContent) || 0;
+        totalScores[cellIndex].textContent = parseInt(totalScores[cellIndex].textContent) - oldValue + newValue;
+        target.dataset.oldValue = newValue;
     }
 });
