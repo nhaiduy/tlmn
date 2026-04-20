@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2f4057">
+<title>Score Keeper</title>
+<style>
+:root{
+  --bg:#2f4057; --bg2:#3a4d68; --tile:#243247; --border:#4a5e7a;
+  --text:#b3cfe7; --dim:#7a95b0;
+  --accent:#f97316; --success:#4ade80; --error:#f87171;
+  --gold:#fbbf24; --silver:#cbd5e1; --bronze:#d97706;
+  --p0:#f97316; --p1:#8b5cf6; --p2:#10b981; --p3:#ec4899; --p4:#3b82f6; --p5:#eab308;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:16px;min-height:100vh;overscroll-behavior:none}
+#app{max-width:600px;margin:0 auto;padding:16px 16px 220px}
+h1{font-size:1.6rem;margin-bottom:18px;font-weight:700;letter-spacing:-0.01em}
+h2{font-size:0.78rem;color:var(--dim);margin:22px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;display:flex;justify-content:space-between;align-items:center}
+button{background:var(--accent);color:#fff;border:none;padding:14px 18px;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;width:100%;transition:opacity .15s,transform .05s;font-family:inherit}
+button:active{transform:scale(0.98)}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.sec{background:var(--bg2);color:var(--text)}
+button.danger{background:var(--error)}
+button.ghost{background:transparent;color:var(--dim);padding:6px 10px;width:auto;font-size:.85rem;font-weight:500}
+button.ghost:hover{color:var(--text)}
+input[type=text]{background:var(--tile);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:1rem;width:100%;font-family:inherit}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.count-sel{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0 16px}
+.count-sel button{padding:12px 0;background:var(--tile);color:var(--text);border:1px solid var(--border);font-weight:600}
+.count-sel button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.name-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+
+/* Game screen */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.header .game-name{font-size:1.25rem;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.sum-banner{text-align:center;padding:14px;border-radius:12px;margin:12px 0 16px;font-size:1.15rem;font-weight:700;transition:all .2s;font-feature-settings:'tnum'}
+.sum-banner.zero{background:rgba(74,222,128,.15);color:var(--success);box-shadow:inset 0 0 0 1px rgba(74,222,128,.3)}
+.sum-banner.nonzero{background:rgba(248,113,113,.12);color:var(--error)}
+
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.tiles.n3{grid-template-columns:repeat(3,1fr)}
+.tiles.n5,.tiles.n6{grid-template-columns:repeat(3,1fr)}
+.tile{background:var(--tile);border:2px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;min-height:84px}
+.tile.active{border-color:var(--accent);background:rgba(249,115,22,.1)}
+.tile.auto{border-style:dashed;opacity:.9}
+.tile .nm{font-size:.8rem;color:var(--dim);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .val{font-size:1.75rem;font-weight:700;font-feature-settings:'tnum';line-height:1.1}
+.tile .val.ph{color:var(--dim);opacity:.5}
+.tile .val.pos{color:var(--success)}
+.tile .val.neg{color:var(--error)}
+.tile .lab{font-size:.68rem;color:var(--dim);margin-top:2px;font-style:italic}
+
+/* Totals */
+.totals{display:flex;flex-direction:column;gap:6px}
+.total{display:flex;align-items:center;padding:12px 14px;background:var(--tile);border-radius:10px;font-feature-settings:'tnum'}
+.total .rk{font-size:1.1rem;margin-right:12px;min-width:24px;text-align:center}
+.total .rk.r1{color:var(--gold)}.total .rk.r2{color:var(--silver)}.total .rk.r3{color:var(--bronze)}
+.total .nm{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.total .sc{font-size:1.15rem;font-weight:700}
+.total .sc.pos{color:var(--success)}.total .sc.neg{color:var(--error)}
+
+/* History */
+.history{width:100%;border-collapse:collapse;background:var(--tile);border-radius:10px;overflow:hidden;font-feature-settings:'tnum';font-size:.95rem}
+.history th,.history td{padding:10px 6px;text-align:center;border-bottom:1px solid var(--border)}
+.history th{background:var(--bg2);font-size:.72rem;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.history tr{cursor:pointer}
+.history tr:last-child td{border-bottom:none}
+.history tr.editable:active td{background:rgba(255,255,255,.04)}
+.history td.pos{color:var(--success)}.history td.neg{color:var(--error)}
+.history .rcol{color:var(--dim);font-weight:600}
+
+/* Keypad */
+.keypad{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);padding:10px 10px calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr);gap:6px;box-shadow:0 -6px 24px rgba(0,0,0,.35);max-width:600px;margin:0 auto;transform:translateY(110%);transition:transform .22s cubic-bezier(.3,.8,.3,1);z-index:50;border-top-left-radius:16px;border-top-right-radius:16px}
+.keypad.visible{transform:translateY(0)}
+.keypad .kp-header{grid-column:span 3;display:flex;justify-content:space-between;align-items:center;padding:2px 6px 6px;color:var(--dim);font-size:.8rem}
+.keypad .kp-header strong{color:var(--text);font-size:.95rem}
+.keypad .kp-right{display:flex;align-items:center;gap:10px}
+.keypad .kp-cur{font-feature-settings:'tnum';font-weight:600;color:var(--text)}
+.keypad .kp-hide{background:transparent;color:var(--dim);padding:6px 10px;width:auto;font-size:.9rem;border-radius:8px;line-height:1}
+.keypad .kp-hide:active{background:var(--tile)}
+.keypad button{background:var(--tile);color:var(--text);font-size:1.4rem;font-weight:600;padding:16px 0;border-radius:10px;width:auto}
+.keypad button.sign{color:var(--accent);font-size:1.6rem}
+.keypad button.back{color:var(--error);font-size:1.3rem}
+.keypad button.done{grid-column:span 3;background:var(--accent);color:#fff;margin-top:4px;font-size:1.05rem}
+.keypad button.done:disabled{background:var(--bg2);border:1px solid var(--border);color:var(--dim)}
+
+/* Chart */
+.chart-box{background:var(--tile);border-radius:10px;padding:12px;margin-bottom:10px}
+.chart-svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.78rem;margin-top:8px;color:var(--dim)}
+.legend .it{display:flex;align-items:center;gap:5px}
+.legend .dot{width:9px;height:9px;border-radius:50%}
+
+/* Previous games */
+.prev{background:var(--tile);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.prev .t{font-weight:600;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.prev .t .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.prev .m{font-size:.82rem;color:var(--dim)}
+.prev .w{color:var(--gold);font-weight:500}
+.prev-actions{display:flex;gap:6px;margin-top:8px}
+.prev-actions button{padding:8px 10px;font-size:.82rem;font-weight:500;background:var(--bg2)}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;backdrop-filter:blur(4px)}
+.modal{background:var(--bg);border-radius:14px;padding:20px;width:100%;max-width:400px;border:1px solid var(--border)}
+.modal h3{margin-bottom:14px;font-size:1.15rem}
+.edit-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.edit-row .nm{flex:1;font-size:.95rem}
+.edit-row input{width:100px;margin:0;text-align:right;font-feature-settings:'tnum'}
+.edit-sum{text-align:center;padding:10px;border-radius:8px;margin:10px 0;font-weight:600;font-feature-settings:'tnum'}
+.edit-sum.zero{background:rgba(74,222,128,.15);color:var(--success)}
+.edit-sum.nonzero{background:rgba(248,113,113,.12);color:var(--error)}
+
+.empty{text-align:center;padding:24px;color:var(--dim);font-size:.9rem}
+.spacer{height:12px}
+
+/* Toast */
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--bg2);color:var(--text);padding:12px 18px;border-radius:24px;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:200;border:1px solid var(--border);opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const COLORS=['--p0','--p1','--p2','--p3','--p4','--p5'];
+const getColor=i=>getComputedStyle(document.documentElement).getPropertyValue(COLORS[i%6]).trim();
+const fmt=n=>n>0?`+${n}`:`${n}`;
+const cls=n=>n===0?'':(n>0?'pos':'neg');
+
+// ---- State ----
+let state=load();
+
+function load(){
+  try{
+    const s=JSON.parse(localStorage.getItem('scorekeeper_v2')||'{}');
+    return {
+      screen:s.current?'game':'start',
+      current:s.current||null,
+      previous:s.previous||[],
+      entry:s.current?{activeIdx:0,values:new Array(s.current.players.length).fill(null),sign:1,editingRound:null,keypadHidden:false}:null,
+      setup:s.setup||{gameType:'',count:4,names:['','','','','','']}
+    };
+  }catch{return {screen:'start',current:null,previous:[],entry:null,setup:{gameType:'',count:4,names:['','','','','','']}}}
+}
+function save(){
+  localStorage.setItem('scorekeeper_v2',JSON.stringify({current:state.current,previous:state.previous,setup:state.setup}));
+}
+
+// ---- Helpers ----
+function totals(game){
+  const t=game.players.map(()=>0);
+  game.rounds.forEach(r=>r.forEach((v,i)=>t[i]+=v));
+  return t;
+}
+function ranks(totals){
+  const ix=totals.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+  const r=new Array(totals.length);
+  ix.forEach((o,pos)=>r[o.i]=pos);
+  return r;
+}
+function autoIdx(){
+  const v=state.entry.values;
+  const nullIdxs=v.map((x,i)=>x===null?i:-1).filter(i=>i>=0);
+  return nullIdxs.length===1?nullIdxs[0]:-1;
+}
+function currentSum(){
+  const v=state.entry.values;
+  const auto=autoIdx();
+  if(auto>=0){
+    const s=v.reduce((a,b)=>a+(b||0),0);
+    return 0; // auto always balances
+  }
+  return v.reduce((a,b)=>a+(b||0),0);
+}
+function canSubmit(){
+  const v=state.entry.values;
+  if(v.some(x=>x===null)&&autoIdx()<0)return false;
+  return currentSum()===0;
+}
+function finalValues(){
+  const v=[...state.entry.values];
+  const a=autoIdx();
+  if(a>=0){
+    const s=v.reduce((acc,x)=>acc+(x||0),0);
+    v[a]=-s;
+  }
+  return v;
+}
+
+// ---- Render ----
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML=state.screen==='start'?renderStart():renderGame();
+  attach();
+}
+
+function renderStart(){
+  const s=state.setup;
+  const nameInputs=Array.from({length:s.count},(_,i)=>
+    `<input type="text" class="name-input" data-idx="${i}" placeholder="Player ${i+1}" value="${s.names[i]||''}">`
+  ).join('');
+  const counts=[2,3,4,5,6].map(n=>
+    `<button class="count-btn ${n===s.count?'on':''}" data-n="${n}">${n}</button>`
+  ).join('');
+
+  let prev='';
+  if(state.previous.length){
+    prev=`<h2>Previous Games <button class="ghost" id="clearAll">Clear all</button></h2>`+
+      state.previous.slice().reverse().map((g,revIdx)=>{
+        const idx=state.previous.length-1-revIdx;
+        const t=totals(g);
+        const r=ranks(t);
+        const winner=g.players[r.indexOf(0)].name||`Player ${r.indexOf(0)+1}`;
+        const date=new Date(g.endedAt||g.startedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+        return `<div class="prev">
+          <div class="t"><span class="nm">${escape(g.gameType||'Untitled game')}</span><span class="m">${date}</span></div>
+          <div class="m"><span class="w">🥇 ${escape(winner)}</span> · ${g.rounds.length} rounds · ${g.players.length} players</div>
+          <div class="prev-actions">
+            <button class="view-prev" data-i="${idx}">View</button>
+            <button class="del-prev" data-i="${idx}">Delete</button>
+          </div>
+        </div>`;
+      }).join('');
+  }
+
+  return `
+    <h1>Score Keeper</h1>
+    <h2>Game</h2>
+    <input type="text" id="gameType" placeholder="e.g. Tiến Lên, Hearts, Rummy" value="${escape(s.gameType)}">
+    <h2>Players</h2>
+    <div class="count-sel">${counts}</div>
+    <div class="name-list">${nameInputs}</div>
+    <button id="startBtn">Start New Game</button>
+    ${prev}
+  `;
+}
+
+function renderGame(){
+  const g=state.current;
+  const e=state.entry;
+  const n=g.players.length;
+  const auto=autoIdx();
+  const sum=currentSum();
+  const sumDisplay=(e.values.some(x=>x===null)&&auto<0)?'—':fmt(sum);
+  const sumClass=(e.values.some(x=>x===null)&&auto<0)?'nonzero':(sum===0?'zero':'nonzero');
+
+  const tiles=g.players.map((p,i)=>{
+    const isAuto=i===auto;
+    const isActive=i===e.activeIdx&&!isAuto;
+    const v=isAuto?(-e.values.reduce((a,b)=>a+(b||0),0)):e.values[i];
+    const hasVal=v!==null&&v!==undefined;
+    return `<div class="tile ${isActive?'active':''} ${isAuto?'auto':''}" data-idx="${i}">
+      <div class="nm">${escape(p.name||`Player ${i+1}`)}</div>
+      <div class="val ${hasVal?cls(v):'ph'}">${hasVal?fmt(v):'—'}</div>
+      ${isAuto?'<div class="lab">auto</div>':''}
+    </div>`;
+  }).join('');
+
+  const t=totals(g);
+  const r=ranks(t);
+  const sortedIdx=[...Array(n).keys()].sort((a,b)=>t[b]-t[a]);
+  const totalsHtml=sortedIdx.map(i=>{
+    const rk=r[i];
+    const medal=rk===0?'🥇':rk===1?'🥈':rk===2?'🥉':`${rk+1}`;
+    return `<div class="total">
+      <div class="rk r${rk+1}">${medal}</div>
+      <div class="nm">${escape(g.players[i].name||`Player ${i+1}`)}</div>
+      <div class="sc ${cls(t[i])}">${fmt(t[i])}</div>
+    </div>`;
+  }).join('');
+
+  let history='';
+  if(g.rounds.length){
+    const heads=g.players.map(p=>`<th>${escape(p.name||'')}</th>`).join('');
+    const rows=g.rounds.map((rd,ri)=>{
+      const tds=rd.map(v=>`<td class="${cls(v)}">${fmt(v)}</td>`).join('');
+      return `<tr class="editable" data-round="${ri}"><td class="rcol">${ri+1}</td>${tds}</tr>`;
+    }).join('');
+    history=`<h2>Rounds <button class="ghost" id="undoBtn">↶ Undo last</button></h2>
+      <table class="history"><thead><tr><th>#</th>${heads}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  let chart='';
+  if(g.rounds.length>=2){
+    chart=`<h2>Trend</h2><div class="chart-box">${renderChart(g)}</div>`;
+  }
+
+  const keypad=renderKeypad();
+
+  const headerTitle=g.gameType
+    ?`<div class="game-name">${escape(g.gameType)}</div>`
+    :`<div class="game-name" style="color:var(--dim);font-weight:500;font-size:1rem">${new Date(g.startedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>`;
+
+  return `
+    <div class="header">
+      ${headerTitle}
+      <button class="ghost" id="endGame">End game</button>
+    </div>
+    <h2>Round ${g.rounds.length+1}</h2>
+    <div class="sum-banner ${sumClass}">Sum: ${sumDisplay} ${sum===0&&!e.values.some(x=>x===null&&autoIdx()<0)?'✓':''}</div>
+    <div class="tiles n${n}">${tiles}</div>
+    <button id="submitRound" ${canSubmit()?'':'disabled'}>Submit Round</button>
+    <h2>Totals</h2>
+    <div class="totals">${totalsHtml}</div>
+    ${history}
+    ${chart}
+    <div class="spacer"></div>
+    <div class="row">
+      <button class="sec" id="shareBtn">📸 Export image</button>
+      <button class="sec" id="newRoundReset">Clear entry</button>
+    </div>
+    ${keypad}
+  `;
+}
+
+function renderKeypad(){
+  const e=state.entry;
+  const g=state.current;
+  const auto=autoIdx();
+  const showKp=!e.keypadHidden&&e.activeIdx!==auto&&e.activeIdx<g.players.length;
+  const active=g.players[e.activeIdx];
+  const curVal=e.values[e.activeIdx];
+  return `<div class="keypad ${showKp?'visible':''}" id="keypad">
+    <div class="kp-header">
+      <span>Entering: <strong>${escape(active?.name||`Player ${e.activeIdx+1}`)}</strong></span>
+      <span class="kp-right">
+        <span class="kp-cur">${curVal===null?'':fmt(curVal)}</span>
+        <button class="kp-hide" data-act="hide" aria-label="Hide keypad">▼</button>
+      </span>
+    </div>
+    ${[7,8,9,4,5,6,1,2,3].map(d=>`<button class="dig" data-d="${d}">${d}</button>`).join('')}
+    <button class="sign" data-act="sign">±</button>
+    <button class="dig" data-d="0">0</button>
+    <button class="back" data-act="back">⌫</button>
+    <button class="done" data-act="next" ${curVal===null?'disabled':''}>${allButOneFilled()?'Auto-fill last':'Next player →'}</button>
+  </div>`;
+}
+
+function allButOneFilled(){
+  const v=state.entry.values;
+  const nulls=v.filter(x=>x===null).length;
+  return nulls===1&&state.entry.activeIdx<v.length&&v[state.entry.activeIdx]!==null;
+}
+
+function renderChart(g){
+  const n=g.players.length;
+  const rounds=g.rounds.length;
+  const cum=g.players.map(()=>[0]);
+  g.rounds.forEach((r,ri)=>r.forEach((v,i)=>cum[i].push(cum[i][ri]+v)));
+  const all=cum.flat();
+  const maxV=Math.max(...all,1);
+  const minV=Math.min(...all,-1);
+  const pad=(maxV-minV)*0.1||1;
+  const yMax=maxV+pad,yMin=minV-pad;
+  const W=560,H=180,ML=30,MR=10,MT=10,MB=24;
+  const iw=W-ML-MR,ih=H-MT-MB;
+  const x=i=>ML+(rounds===0?0:(i/rounds)*iw);
+  const y=v=>MT+ih-((v-yMin)/(yMax-yMin))*ih;
+  const zeroY=y(0);
+  const lines=cum.map((arr,i)=>{
+    const d=arr.map((v,idx)=>`${idx===0?'M':'L'}${x(idx).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    return `<path d="${d}" fill="none" stroke="${getColor(i)}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join('');
+  const dots=cum.map((arr,i)=>arr.map((v,idx)=>`<circle cx="${x(idx).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${getColor(i)}"/>`).join('')).join('');
+  const xLabels=Array.from({length:rounds+1},(_,i)=>`<text x="${x(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="var(--dim)">${i}</text>`).join('');
+  const yLabelsArr=[yMin,0,yMax].map(v=>`<text x="${ML-6}" y="${(y(v)+3).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--dim)">${Math.round(v)}</text>`).join('');
+  const legend=g.players.map((p,i)=>`<div class="it"><div class="dot" style="background:${getColor(i)}"></div>${escape(p.name||`P${i+1}`)}</div>`).join('');
+  return `
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <line x1="${ML}" y1="${zeroY}" x2="${W-MR}" y2="${zeroY}" stroke="var(--border)" stroke-dasharray="3,3"/>
+      ${lines}${dots}${xLabels}${yLabelsArr}
+    </svg>
+    <div class="legend">${legend}</div>`;
+}
+
+// ---- Events ----
+function attach(){
+  if(state.screen==='start')attachStart();else attachGame();
+}
+
+function attachStart(){
+  document.querySelectorAll('.count-btn').forEach(b=>b.onclick=()=>{
+    state.setup.count=+b.dataset.n;save();render();
+  });
+  document.querySelectorAll('.name-input').forEach(inp=>inp.oninput=()=>{
+    state.setup.names[+inp.dataset.idx]=inp.value;save();
+  });
+  const gt=document.getElementById('gameType');
+  if(gt)gt.oninput=()=>{state.setup.gameType=gt.value;save();};
+  document.getElementById('startBtn').onclick=startGame;
+  document.querySelectorAll('.view-prev').forEach(b=>b.onclick=()=>{
+    const g=state.previous[+b.dataset.i];
+    alert(formatGameSummary(g));
+  });
+  document.querySelectorAll('.del-prev').forEach(b=>b.onclick=()=>{
+    if(confirm('Delete this game?')){
+      state.previous.splice(+b.dataset.i,1);save();render();
+    }
+  });
+  const ca=document.getElementById('clearAll');
+  if(ca)ca.onclick=()=>{
+    if(confirm('Delete ALL previous games?')){
+      state.previous=[];save();render();
+    }
+  };
+}
+
+function startGame(){
+  const s=state.setup;
+  const players=Array.from({length:s.count},(_,i)=>({name:(s.names[i]||`Player ${i+1}`).trim()||`Player ${i+1}`}));
+  state.current={gameType:(s.gameType||'').trim(),players,rounds:[],startedAt:new Date().toISOString()};
+  state.entry={activeIdx:0,values:new Array(s.count).fill(null),sign:1,editingRound:null,keypadHidden:false};
+  state.screen='game';save();render();
+}
+
+function attachGame(){
+  // Tile tap -> set active
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{
+    const i=+t.dataset.idx;
+    if(i===autoIdx())return;
+    state.entry.activeIdx=i;state.entry.sign=(state.entry.values[i]||0)<0?-1:1;
+    state.entry.keypadHidden=false;
+    render();
+  });
+  // Keypad
+  document.querySelectorAll('.keypad .dig').forEach(b=>b.onclick=()=>pressDigit(+b.dataset.d));
+  document.querySelectorAll('.keypad [data-act]').forEach(b=>b.onclick=()=>keypadAct(b.dataset.act));
+  // Submit
+  const sb=document.getElementById('submitRound');
+  if(sb)sb.onclick=submitRound;
+  // History row edit
+  document.querySelectorAll('.history tr.editable').forEach(tr=>tr.onclick=()=>openEdit(+tr.dataset.round));
+  // End game
+  document.getElementById('endGame').onclick=endGame;
+  // Undo
+  const ub=document.getElementById('undoBtn');
+  if(ub)ub.onclick=undoLast;
+  // Reset entry
+  document.getElementById('newRoundReset').onclick=()=>{
+    state.entry.values=new Array(state.current.players.length).fill(null);
+    state.entry.activeIdx=0;render();
+  };
+  // Share
+  document.getElementById('shareBtn').onclick=exportImage;
+}
+
+function pressDigit(d){
+  const e=state.entry;
+  const i=e.activeIdx;
+  const cur=e.values[i];
+  if(cur===null){
+    e.values[i]=e.sign*d;
+  }else{
+    const abs=Math.abs(cur);
+    const sign=cur<0?-1:1;
+    // Limit to 4 digits
+    if(abs>=9999)return;
+    e.values[i]=sign*(abs*10+d);
+  }
+  render();
+}
+
+function keypadAct(a){
+  const e=state.entry;
+  const i=e.activeIdx;
+  if(a==='hide'){
+    e.keypadHidden=true;
+    render();return;
+  }
+  if(a==='sign'){
+    if(e.values[i]===null){
+      e.sign=e.sign===1?-1:1;
+    }else{
+      e.values[i]=-e.values[i];
+    }
+  }else if(a==='back'){
+    const cur=e.values[i];
+    if(cur===null||cur===0){
+      e.values[i]=null;
+    }else{
+      const abs=Math.abs(cur);
+      const sign=cur<0?-1:1;
+      const next=Math.floor(abs/10);
+      e.values[i]=next===0?(abs<10&&abs>0?0:null):sign*next;
+      if(e.values[i]===0&&abs>=10){/* keep 0 */}
+      else if(abs<10)e.values[i]=null;
+    }
+  }else if(a==='next'){
+    if(e.values[i]===null)return;
+    e.sign=1;
+    // Move to next unfilled that's not auto
+    const auto=autoIdx();
+    const n=state.current.players.length;
+    let next=-1;
+    for(let k=1;k<=n;k++){
+      const idx=(i+k)%n;
+      if(e.values[idx]===null&&idx!==auto){next=idx;break;}
+    }
+    if(next>=0)e.activeIdx=next;
+    else{
+      // only auto tile left or none
+      const newAuto=autoIdx();
+      if(newAuto>=0)e.activeIdx=newAuto;
+    }
+  }
+  render();
+}
+
+function submitRound(){
+  if(!canSubmit())return;
+  const vals=finalValues();
+  state.current.rounds.push(vals);
+  state.entry.values=new Array(state.current.players.length).fill(null);
+  state.entry.activeIdx=0;state.entry.sign=1;
+  save();render();toast(`Round ${state.current.rounds.length} saved`);
+}
+
+function undoLast(){
+  if(!state.current.rounds.length)return;
+  if(!confirm('Undo the last round?'))return;
+  state.current.rounds.pop();save();render();toast('Last round removed');
+}
+
+function openEdit(ri){
+  const round=state.current.rounds[ri];
+  const overlay=document.createElement('div');
+  overlay.className='modal-bg';
+  const rows=state.current.players.map((p,i)=>`<div class="edit-row">
+    <div class="nm">${escape(p.name||`Player ${i+1}`)}</div>
+    <input type="number" inputmode="numeric" data-i="${i}" value="${round[i]}">
+  </div>`).join('');
+  overlay.innerHTML=`<div class="modal">
+    <h3>Edit Round ${ri+1}</h3>
+    ${rows}
+    <div class="edit-sum" id="editSum">Sum: 0 ✓</div>
+    <div class="row">
+      <button class="sec" id="editCancel">Cancel</button>
+      <button class="danger" id="editDelete">Delete</button>
+      <button id="editSave">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const inputs=overlay.querySelectorAll('input');
+  const sumEl=overlay.querySelector('#editSum');
+  const upd=()=>{
+    const vals=[...inputs].map(inp=>+inp.value||0);
+    const s=vals.reduce((a,b)=>a+b,0);
+    sumEl.textContent=`Sum: ${fmt(s)} ${s===0?'✓':''}`;
+    sumEl.className='edit-sum '+(s===0?'zero':'nonzero');
+    overlay.querySelector('#editSave').disabled=s!==0;
+  };
+  inputs.forEach(inp=>inp.oninput=upd);upd();
+  overlay.querySelector('#editCancel').onclick=()=>overlay.remove();
+  overlay.querySelector('#editDelete').onclick=()=>{
+    if(confirm(`Delete round ${ri+1}?`)){
+      state.current.rounds.splice(ri,1);save();overlay.remove();render();toast('Round deleted');
+    }
+  };
+  overlay.querySelector('#editSave').onclick=()=>{
+    const vals=[...inputs].map(inp=>+inp.value||0);
+    if(vals.reduce((a,b)=>a+b,0)!==0)return;
+    state.current.rounds[ri]=vals;save();overlay.remove();render();toast('Round updated');
+  };
+  overlay.onclick=(ev)=>{if(ev.target===overlay)overlay.remove();};
+}
+
+function endGame(){
+  if(!confirm('End this game? It will be saved to history.'))return;
+  state.current.endedAt=new Date().toISOString();
+  state.previous.push(state.current);
+  state.current=null;state.entry=null;state.screen='start';
+  save();render();toast('Game saved');
+}
+
+// ---- Export as image ----
+function exportImage(){
+  const g=state.current;
+  const n=g.players.length;
+  const rounds=g.rounds.length;
+  const t=totals(g);
+  const r=ranks(t);
+  const W=720;
+  const rowH=36,hdr=160,footer=40;
+  const H=hdr+(n+1+rounds)*rowH+footer+40;
+  const c=document.createElement('canvas');
+  c.width=W*2;c.height=H*2;c.style.width=W+'px';c.style.height=H+'px';
+  const ctx=c.getContext('2d');ctx.scale(2,2);
+  ctx.fillStyle='#2f4057';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#b3cfe7';ctx.font='bold 28px -apple-system,system-ui,sans-serif';
+  ctx.fillText(g.gameType||'Scoreboard',24,44);
+  ctx.fillStyle='#7a95b0';ctx.font='14px -apple-system,system-ui,sans-serif';
+  ctx.fillText(new Date(g.startedAt).toLocaleDateString()+' · '+rounds+' rounds',24,66);
+
+  // Totals header
+  let yy=100;
+  ctx.fillStyle='#7a95b0';ctx.font='600 11px -apple-system,system-ui,sans-serif';
+  ctx.fillText('FINAL STANDINGS',24,yy);yy+=24;
+  const sortedIdx=[...Array(n).keys()].sort((a,b)=>t[b]-t[a]);
+  sortedIdx.forEach((i,pos)=>{
+    const medal=pos===0?'🥇':pos===1?'🥈':pos===2?'🥉':`${pos+1}.`;
+    ctx.fillStyle='#243247';ctx.fillRect(24,yy-20,W-48,28);
+    ctx.fillStyle=pos===0?'#fbbf24':pos===1?'#cbd5e1':pos===2?'#d97706':'#b3cfe7';
+    ctx.font='600 15px -apple-system,system-ui,sans-serif';
+    ctx.fillText(medal,32,yy);
+    ctx.fillStyle='#b3cfe7';ctx.font='500 15px -apple-system,system-ui,sans-serif';
+    ctx.fillText(g.players[i].name||`Player ${i+1}`,68,yy);
+    ctx.fillStyle=t[i]>0?'#4ade80':t[i]<0?'#f87171':'#b3cfe7';
+    ctx.font='bold 16px -apple-system,system-ui,sans-serif';
+    ctx.textAlign='right';ctx.fillText(fmt(t[i]),W-36,yy);ctx.textAlign='left';
+    yy+=32;
+  });
+
+  // Rounds table
+  if(rounds){
+    yy+=16;
+    ctx.fillStyle='#7a95b0';ctx.font='600 11px -apple-system,system-ui,sans-serif';
+    ctx.fillText('ROUNDS',24,yy);yy+=20;
+    const colW=(W-80)/n;
+    // headers
+    ctx.fillStyle='#3a4d68';ctx.fillRect(24,yy-14,W-48,24);
+    ctx.fillStyle='#7a95b0';ctx.font='600 11px -apple-system,system-ui,sans-serif';
+    ctx.fillText('#',34,yy+2);
+    g.players.forEach((p,i)=>{
+      ctx.textAlign='center';
+      ctx.fillText((p.name||`P${i+1}`).slice(0,10),56+colW*i+colW/2,yy+2);
+    });
+    ctx.textAlign='left';yy+=24;
+    g.rounds.forEach((rd,ri)=>{
+      if(ri%2===0){ctx.fillStyle='rgba(255,255,255,.02)';ctx.fillRect(24,yy-14,W-48,24);}
+      ctx.fillStyle='#7a95b0';ctx.font='600 13px -apple-system,system-ui,sans-serif';
+      ctx.fillText(ri+1,34,yy+2);
+      rd.forEach((v,i)=>{
+        ctx.fillStyle=v>0?'#4ade80':v<0?'#f87171':'#b3cfe7';
+        ctx.font='500 13px -apple-system,system-ui,sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText(fmt(v),56+colW*i+colW/2,yy+2);
+      });
+      ctx.textAlign='left';yy+=24;
+    });
+  }
+  // Footer
+  ctx.fillStyle='#7a95b0';ctx.font='11px -apple-system,system-ui,sans-serif';
+  ctx.fillText('Score Keeper',24,H-16);
+
+  c.toBlob(blob=>{
+    const url=URL.createObjectURL(blob);
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[new File([blob],'scoreboard.png',{type:'image/png'})]})){
+      navigator.share({files:[new File([blob],'scoreboard.png',{type:'image/png'})],title:g.gameType||'Scoreboard'}).catch(()=>downloadBlob(url,'scoreboard.png'));
+    }else{
+      downloadBlob(url,'scoreboard.png');
+    }
+  },'image/png');
+}
+function downloadBlob(url,name){
+  const a=document.createElement('a');a.href=url;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Image saved');
+}
+
+function formatGameSummary(g){
+  const t=totals(g);
+  const r=ranks(t);
+  const lines=[`${g.gameType||'Game'} · ${g.rounds.length} rounds`,''];
+  const sortedIdx=[...Array(g.players.length).keys()].sort((a,b)=>t[b]-t[a]);
+  sortedIdx.forEach((i,pos)=>{
+    const medal=pos===0?'🥇':pos===1?'🥈':pos===2?'🥉':`${pos+1}.`;
+    lines.push(`${medal} ${g.players[i].name||`Player ${i+1}`}: ${fmt(t[i])}`);
+  });
+  return lines.join('\n');
+}
+
+function toast(msg){
+  const el=document.createElement('div');
+  el.className='toast';el.textContent=msg;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},1600);
+}
+
+function escape(s){return String(s||'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+render();
+</script>
+</body>
+</html>
